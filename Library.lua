@@ -10,7 +10,7 @@ local LocalPlayer = Players.LocalPlayer;
 local Mouse = LocalPlayer:GetMouse();
 
 -- config
-local FontScale = 0.85 -- change this to whatever scale u want (1 = normal, 0.85 = smaller etc)
+local FontScale = 0.7 -- change this to whatever scale u want (1 = normal, 0.85 = smaller etc)
 
 local Fonts; do 
     local HttpService = cloneref(game:GetService("HttpService"));
