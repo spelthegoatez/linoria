@@ -1,3 +1,9 @@
+-- Clean up previous execution (if any)
+if getgenv() and rawget(getgenv(), "__linoria_cleanup") then
+    pcall(getgenv().__linoria_cleanup)
+    getgenv().__linoria_cleanup = nil
+    task.wait(0.1)
+end
 local InputService = game:GetService('UserInputService');
 local TextService = game:GetService('TextService');
 local CoreGui = game:GetService('CoreGui');
@@ -14,7 +20,7 @@ local TextSize = 12        -- main text (labels, buttons, inputs, dropdowns)
 local SmallTextSize = 11   -- smaller text (keybinds, color picker titles etc)
 local TitleTextSize = 12   -- bigger text (window title, groupbox headers)
 
-local Fonts; do 
+local Fonts; do
     local HttpService = cloneref(game:GetService("HttpService"));
     Fonts = {
         ["windows-xp-tahoma"] = {
@@ -22,37 +28,55 @@ local Fonts; do
             Url = "https://raw.githubusercontent.com/sametexe001/luas/main/fonts/windows-xp-tahoma.ttf"
         };
     };
+
+    -- Wipe any existing font files from prior executions so we never
+    -- hand a stale/partially-written file to getcustomasset (that's what
+    -- causes the "freeze on second execute" behavior).
+    for Name, FontData in Fonts do
+        if type(FontData) == "table" then
+            for _, fname in ipairs(FontData.FileName) do
+                pcall(function()
+                    if isfile(fname) then delfile(fname) end
+                end);
+            end;
+        end;
+    end;
+    -- Also nuke the old folder if it exists from previous versions
+    pcall(function()
+        if isfolder and isfolder("LinoriaFonts") then
+            for _, f in ipairs(listfiles("LinoriaFonts")) do
+                pcall(delfile, f);
+            end;
+        end;
+    end);
+
     for Name, FontData in Fonts do
         if type(FontData) == "table" then
             local FileName = FontData.FileName;
-            local ttfPath  = FileName[1];   -- root, no folder prefix
-            local jsonPath = FileName[2];   -- root, no folder prefix
+            local ttfPath  = FileName[1];   -- root, no folder
+            local jsonPath = FileName[2];   -- root, no folder
 
-            local needsDownload = true;
-            if isfile(ttfPath) then
-                local ok, sz = pcall(function() return #readfile(ttfPath) end);
-                if ok and type(sz) == "number" and sz > 1000 then needsDownload = false end;
-            end;
-            if needsDownload then
-                pcall(function()
-                    writefile(ttfPath, game:HttpGet(FontData.Url));
-                end);
-            end;
+            -- Download fresh TTF
+            local okDl = pcall(function()
+                writefile(ttfPath, game:HttpGet(FontData.Url));
+            end);
 
-            local okAsset, assetId = pcall(getcustomasset, ttfPath);
-            if okAsset and assetId then
-                local Data = {
-                    name = Name;
-                    faces = {{
-                        name = "Regular";
-                        weight = 400;
-                        style = "normal";
-                        assetId = assetId;
-                    }};
-                };
-                pcall(function()
-                    writefile(jsonPath, HttpService:JSONEncode(Data));
-                end);
+            if okDl and isfile(ttfPath) then
+                local okAsset, assetId = pcall(getcustomasset, ttfPath);
+                if okAsset and assetId then
+                    local Data = {
+                        name = Name;
+                        faces = {{
+                            name = "Regular";
+                            weight = 400;
+                            style = "normal";
+                            assetId = assetId;
+                        }};
+                    };
+                    pcall(function()
+                        writefile(jsonPath, HttpService:JSONEncode(Data));
+                    end);
+                end;
             end;
         end;
     end;
@@ -3683,4 +3707,7 @@ Players.PlayerAdded:Connect(OnPlayerChange);
 Players.PlayerRemoving:Connect(OnPlayerChange);
 
 getgenv().Library = Library
+getgenv().__linoria_cleanup = function()
+    pcall(function() Library:Unload() end)
+end
 return Library
