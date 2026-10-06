@@ -11,8 +11,8 @@ local Mouse = LocalPlayer:GetMouse();
 
 -- config
 local TextSize = 12        -- main text (labels, buttons, inputs, dropdowns)
-local SmallTextSize = 12   -- smaller text (keybinds, color picker titles etc)
-local TitleTextSize = 11   -- bigger text (window title, groupbox headers)
+local SmallTextSize = 11   -- smaller text (keybinds, color picker titles etc)
+local TitleTextSize = 12   -- bigger text (window title, groupbox headers)
 
 local Fonts; do 
     local HttpService = cloneref(game:GetService("HttpService"));
