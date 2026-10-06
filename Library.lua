@@ -447,8 +447,8 @@ function Library:UpdateColorsUsingRegistry()
             elseif type(ColorIdx) == 'function' then
                 Object.Instance[Property] = ColorIdx()
             end
-        end;
-    end;
+        end
+    end
 end;
 
 function Library:GiveSignal(Signal)
@@ -465,6 +465,13 @@ function Library:Unload()
         Library.OnUnload()
     end
 
+    -- Remove the blur we own (leave any unrelated blur the game had alone).
+    if Library.BlurEffect then
+        pcall(function() Library.BlurEffect:Destroy() end)
+        Library.BlurEffect = nil
+    end
+    Library.BlurEnabled = false
+
     ScreenGui:Destroy()
 end
 
@@ -473,7 +480,12 @@ function Library:OnUnload(Callback)
 end
 
 Library:GiveSignal(ScreenGui.DescendantRemoving:Connect(function(Instance)
-            -- Blur handling ------------------------------------------------------------
+    if Library.RegistryMap[Instance] then
+        Library:RemoveFromRegistry(Instance);
+    end;
+end))
+
+-- Blur handling ------------------------------------------------------------
 do
     local Lighting = game:GetService('Lighting')
 
@@ -531,10 +543,6 @@ do
     end);
 end;
 -- --------------------------------------------------------------------------
-    if Library.RegistryMap[Instance] then
-        Library:RemoveFromRegistry(Instance);
-    end;
-end))
 
 local BaseAddons = {};
 
@@ -2073,7 +2081,7 @@ do
             Library:AddToRegistry(ToggleLabel, { TextColor3 = 'RiskColor' })
         end
 
-        Toggle:Display();
+        Toggle:Display(true);
         Groupbox:AddBlank(Info.BlankSize or 5 + 2);
         Groupbox:Resize();
 
@@ -2291,7 +2299,7 @@ do
             end;
         end);
 
-        Slider:Display();
+        Slider:Display(true);
         Groupbox:AddBlank(Info.BlankSize or 6);
         Groupbox:Resize();
 
@@ -3686,6 +3694,8 @@ function Library:CreateWindow(...)
         Fading = true;
         Toggled = (not Toggled);
         ModalElement.Modal = Toggled;
+
+        Library:SetBlur(Toggled);
 
         if Toggled then
             Outer.Visible = true;
