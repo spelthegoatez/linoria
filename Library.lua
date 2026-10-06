@@ -494,14 +494,27 @@ Library:GiveSignal(ScreenGui.DescendantRemoving:Connect(function(Instance)
     end;
 end))
 
--- Blur handling ------------------------------------------------------------
+-- Blur + tint handling -----------------------------------------------------
 do
     local Lighting = game:GetService('Lighting')
 
     Library.BlurEnabled    = false;
-    Library.BlurSize       = 40;    -- bumped; 24 was too subtle
+    Library.BlurSize       = 40;
     Library.BlurEffect     = nil;
-    Library.BlurSavedState = {};    -- [otherBlur] = wasEnabledBefore
+    Library.BlurSavedState = {};
+    Library.BlurTint       = nil;
+
+    -- Dark overlay so the effect is visible even when post-processing is off
+    Library.BlurTint = Library:Create('Frame', {
+        Name = '__linoria_blur_tint';
+        BackgroundColor3 = Color3.new(0, 0, 0);
+        BackgroundTransparency = 1;
+        BorderSizePixel = 0;
+        Size = UDim2.fromScale(1, 1);
+        ZIndex = 0;
+        Visible = false;
+        Parent = ScreenGui;
+    });
 
     local function EnsureBlur()
         local blur = Library.BlurEffect;
@@ -543,6 +556,24 @@ do
         blur.Size    = Library.BlurSize;
         blur.Enabled = Enabled;
 
+        -- fade the tint in/out (visible on any graphics setting)
+        if Library.BlurTint then
+            if Enabled then
+                Library.BlurTint.Visible = true;
+                TweenService:Create(Library.BlurTint, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+                    BackgroundTransparency = 0.55;
+                }):Play();
+            else
+                local t = TweenService:Create(Library.BlurTint, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+                    BackgroundTransparency = 1;
+                });
+                t.Completed:Connect(function()
+                    Library.BlurTint.Visible = false;
+                end);
+                t:Play();
+            end;
+        end;
+
         if Enabled then
             SuppressOthers();
         else
@@ -556,7 +587,6 @@ do
         blur.Size = Size;
     end;
 
-    -- If our blur gets removed (Lighting cleared, game wiped it), re-add it.
     Library:GiveSignal(Lighting.ChildRemoved:Connect(function(Child)
         if Child == Library.BlurEffect or Child.Name == '__linoria_blur' then
             Library.BlurEffect = nil;
@@ -567,7 +597,6 @@ do
         end;
     end));
 
-    -- If the game spawns a new BlurEffect while we're open, suppress it too.
     Library:GiveSignal(Lighting.ChildAdded:Connect(function(Child)
         if Child:IsA('BlurEffect') and Child ~= Library.BlurEffect and Library.BlurEnabled then
             if Library.BlurSavedState[Child] == nil then
@@ -577,11 +606,9 @@ do
         end;
     end));
 
-    -- Watchdog: keeps blur alive and sized right if anything fights us.
     task.spawn(function()
         while ScreenGui.Parent do
             task.wait(0.25);
-
             if Library.BlurEnabled then
                 local blur = EnsureBlur();
                 if blur.Size ~= Library.BlurSize then blur.Size = Library.BlurSize end;
@@ -591,7 +618,6 @@ do
         end;
     end);
 end;
--- --------------------------------------------------------------------------
 -- --------------------------------------------------------------------------
 
 local BaseAddons = {};
