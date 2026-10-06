@@ -1951,12 +1951,32 @@ do
             Library:AddToolTip(Info.Tooltip, ToggleRegion)
         end
 
-        function Toggle:Display()
-            ToggleInner.BackgroundColor3 = Toggle.Value and Library.AccentColor or Library.MainColor;
-            ToggleInner.BorderColor3 = Toggle.Value and Library.AccentColorDark or Library.OutlineColor;
+        local ToggleTween
+
+        function Toggle:Display(Instant)
+            local TargetBackground = Toggle.Value and Library.AccentColor or Library.MainColor;
+            local TargetBorder = Toggle.Value and Library.AccentColorDark or Library.OutlineColor;
 
             Library.RegistryMap[ToggleInner].Properties.BackgroundColor3 = Toggle.Value and 'AccentColor' or 'MainColor';
             Library.RegistryMap[ToggleInner].Properties.BorderColor3 = Toggle.Value and 'AccentColorDark' or 'OutlineColor';
+
+            if Instant then
+                if ToggleTween then ToggleTween:Cancel(); ToggleTween = nil end
+
+                ToggleInner.BackgroundColor3 = TargetBackground;
+                ToggleInner.BorderColor3 = TargetBorder;
+
+                return;
+            end
+
+            if ToggleTween then ToggleTween:Cancel() end
+
+            ToggleTween = TweenService:Create(ToggleInner, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = TargetBackground;
+                BorderColor3 = TargetBorder;
+            });
+
+            ToggleTween:Play();
         end;
 
         function Toggle:OnChanged(Func)
@@ -2118,7 +2138,9 @@ do
             Fill.BorderColor3 = Library.AccentColorDark;
         end;
 
-        function Slider:Display()
+        local FillTween
+
+        function Slider:Display(Instant)
             local Suffix = Info.Suffix or '';
 
             if Info.Compact then
@@ -2130,7 +2152,21 @@ do
             end
 
             local X = math.ceil(Library:MapValue(Slider.Value, Slider.Min, Slider.Max, 0, Slider.MaxSize));
-            Fill.Size = UDim2.new(0, X, 1, 0);
+            local TargetSize = UDim2.new(0, X, 1, 0);
+
+            if Instant then
+                if FillTween then FillTween:Cancel(); FillTween = nil end
+
+                Fill.Size = TargetSize;
+            else
+                if FillTween then FillTween:Cancel() end
+
+                FillTween = TweenService:Create(Fill, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Size = TargetSize;
+                });
+
+                FillTween:Play();
+            end
 
             HideBorderRight.Visible = not (X == Slider.MaxSize or X == 0);
         end;
