@@ -17,7 +17,7 @@ local TitleTextSize = 12   -- bigger text (window title, groupbox headers)
 local Fonts; do 
     local HttpService = cloneref(game:GetService("HttpService"));
     Fonts = {
-        Folder = "",
+        Folder = "LinoriaFonts",
         ["windows-xp-tahoma"] = {
             FileName = {"windowsXPTahoma.ttf", "windowsXPTahoma.json"},
             Url = "https://raw.githubusercontent.com/sametexe001/luas/main/fonts/windows-xp-tahoma.ttf"
@@ -55,34 +55,53 @@ local Fonts; do
             Url = "https://github.com/sametexe001/luas/raw/refs/heads/main/fonts/open-sans-px.ttf"
         };
     };
-    if Fonts.Folder ~= "" and not isfolder(Fonts.Folder) then
+    if not isfolder(Fonts.Folder) then
         makefolder(Fonts.Folder);
     end;
     for Name, FontData in Fonts do
         if type(FontData) == "table" then
             local FileName = FontData.FileName;
-            
-            if not isfile(FileName[1]) then
-                writefile(FileName[1], game:HttpGet(FontData.Url));
+            local ttfPath  = Fonts.Folder .. "/" .. FileName[1];
+            local jsonPath = Fonts.Folder .. "/" .. FileName[2];
+
+            local needsDownload = true;
+            if isfile(ttfPath) then
+                local ok, sz = pcall(function() return #readfile(ttfPath) end);
+                if ok and type(sz) == "number" and sz > 1000 then needsDownload = false end;
             end;
-            local Data = {
-                Name = Name;
-                Faces = {{
-                    Name = "Regular";
-                    Weight = 200;
-                    Style = "Regular";
-                    AssetId = getcustomasset(FileName[1]);
-                }};
-            };
-            if not isfile(FileName[2]) then
-                writefile(FileName[2], HttpService:JSONEncode(Data));
+            if needsDownload then
+                pcall(function()
+                    writefile(ttfPath, game:HttpGet(FontData.Url));
+                end);
+            end;
+
+            local okAsset, assetId = pcall(getcustomasset, ttfPath);
+            if okAsset and assetId then
+                local Data = {
+                    Name = Name;
+                    Faces = {{
+                        Name = "Regular";
+                        Weight = 400;
+                        Style = "Normal";
+                        AssetId = assetId;
+                    }};
+                };
+                pcall(function()
+                    writefile(jsonPath, HttpService:JSONEncode(Data));
+                end);
             end;
         end;
     end;
     function Fonts.GetFont(Name)
         for FontName, FontData in Fonts do
             if FontName == Name then 
-                return Font.new(getcustomasset(FontData.FileName[2]));
+                local path = Fonts.Folder .. "/" .. FontData.FileName[2];
+                if not isfile(path) then return nil end;
+                local ok, font = pcall(function()
+                    return Font.new(getcustomasset(path));
+                end);
+                if ok then return font end;
+                return nil;
             end;
         end;
     end;
