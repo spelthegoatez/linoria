@@ -465,7 +465,16 @@ function Library:Unload()
         Library.OnUnload()
     end
 
-    -- Remove the blur we own (leave any unrelated blur the game had alone).
+    -- Restore any BlurEffect we suppressed, then remove our own.
+    if Library.BlurSavedState then
+        for effect, wasEnabled in pairs(Library.BlurSavedState) do
+            if effect and effect.Parent then
+                pcall(function() effect.Enabled = wasEnabled end);
+            end;
+        end
+        Library.BlurSavedState = {};
+    end
+
     if Library.BlurEffect then
         pcall(function() Library.BlurEffect:Destroy() end)
         Library.BlurEffect = nil
@@ -489,9 +498,10 @@ end))
 do
     local Lighting = game:GetService('Lighting')
 
-    Library.BlurEnabled = false;   -- only true while the menu is open
-    Library.BlurSize    = 24;      -- adjust to taste
-    Library.BlurEffect  = nil;
+    Library.BlurEnabled    = false;
+    Library.BlurSize       = 40;    -- bumped; 24 was too subtle
+    Library.BlurEffect     = nil;
+    Library.BlurSavedState = {};    -- [otherBlur] = wasEnabledBefore
 
     local function EnsureBlur()
         local blur = Library.BlurEffect;
@@ -506,10 +516,38 @@ do
         return blur;
     end;
 
+    local function SuppressOthers()
+        for _, child in ipairs(Lighting:GetChildren()) do
+            if child:IsA('BlurEffect') and child ~= Library.BlurEffect then
+                if Library.BlurSavedState[child] == nil then
+                    Library.BlurSavedState[child] = child.Enabled;
+                end;
+                child.Enabled = false;
+            end;
+        end;
+    end;
+
+    local function RestoreOthers()
+        for effect, wasEnabled in pairs(Library.BlurSavedState) do
+            if effect and effect.Parent then
+                pcall(function() effect.Enabled = wasEnabled end);
+            end;
+        end;
+        Library.BlurSavedState = {};
+    end;
+
     function Library:SetBlur(Enabled)
         Library.BlurEnabled = Enabled;
+
         local blur = EnsureBlur();
+        blur.Size    = Library.BlurSize;
         blur.Enabled = Enabled;
+
+        if Enabled then
+            SuppressOthers();
+        else
+            RestoreOthers();
+        end;
     end;
 
     function Library:SetBlurSize(Size)
@@ -518,30 +556,42 @@ do
         blur.Size = Size;
     end;
 
-    -- Re-add if someone removes our BlurEffect (or clears Lighting).
+    -- If our blur gets removed (Lighting cleared, game wiped it), re-add it.
     Library:GiveSignal(Lighting.ChildRemoved:Connect(function(Child)
         if Child == Library.BlurEffect or Child.Name == '__linoria_blur' then
             Library.BlurEffect = nil;
             if Library.BlurEnabled then
                 EnsureBlur();
+                SuppressOthers();
             end;
         end;
     end));
 
-    -- Watchdog: periodically re-assert the effect so we survive total
-    -- Lighting resets / scripts that wipe everything under Lighting.
+    -- If the game spawns a new BlurEffect while we're open, suppress it too.
+    Library:GiveSignal(Lighting.ChildAdded:Connect(function(Child)
+        if Child:IsA('BlurEffect') and Child ~= Library.BlurEffect and Library.BlurEnabled then
+            if Library.BlurSavedState[Child] == nil then
+                Library.BlurSavedState[Child] = Child.Enabled;
+            end;
+            Child.Enabled = false;
+        end;
+    end));
+
+    -- Watchdog: keeps blur alive and sized right if anything fights us.
     task.spawn(function()
         while ScreenGui.Parent do
-            task.wait(0.5);
+            task.wait(0.25);
 
             if Library.BlurEnabled then
                 local blur = EnsureBlur();
                 if blur.Size ~= Library.BlurSize then blur.Size = Library.BlurSize end;
                 if not blur.Enabled then blur.Enabled = true end;
+                SuppressOthers();
             end;
         end;
     end);
 end;
+-- --------------------------------------------------------------------------
 -- --------------------------------------------------------------------------
 
 local BaseAddons = {};
