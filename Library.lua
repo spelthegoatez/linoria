@@ -494,7 +494,7 @@ Library:GiveSignal(ScreenGui.DescendantRemoving:Connect(function(Instance)
     end;
 end))
 
--- Blur + tint handling -----------------------------------------------------
+-- Blur handling ------------------------------------------------------------
 do
     local Lighting = game:GetService('Lighting')
 
@@ -502,19 +502,6 @@ do
     Library.BlurSize       = 40;
     Library.BlurEffect     = nil;
     Library.BlurSavedState = {};
-    Library.BlurTint       = nil;
-
-    -- Dark overlay so the effect is visible even when post-processing is off
-    Library.BlurTint = Library:Create('Frame', {
-        Name = '__linoria_blur_tint';
-        BackgroundColor3 = Color3.new(0, 0, 0);
-        BackgroundTransparency = 1;
-        BorderSizePixel = 0;
-        Size = UDim2.fromScale(1, 1);
-        ZIndex = 0;
-        Visible = false;
-        Parent = ScreenGui;
-    });
 
     local function EnsureBlur()
         local blur = Library.BlurEffect;
@@ -555,24 +542,6 @@ do
         local blur = EnsureBlur();
         blur.Size    = Library.BlurSize;
         blur.Enabled = Enabled;
-
-        -- fade the tint in/out (visible on any graphics setting)
-        if Library.BlurTint then
-            if Enabled then
-                Library.BlurTint.Visible = true;
-                TweenService:Create(Library.BlurTint, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
-                    BackgroundTransparency = 0.55;
-                }):Play();
-            else
-                local t = TweenService:Create(Library.BlurTint, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
-                    BackgroundTransparency = 1;
-                });
-                t.Completed:Connect(function()
-                    Library.BlurTint.Visible = false;
-                end);
-                t:Play();
-            end;
-        end;
 
         if Enabled then
             SuppressOthers();
@@ -618,6 +587,7 @@ do
         end;
     end);
 end;
+-- --------------------------------------------------------------------------
 -- --------------------------------------------------------------------------
 
 local BaseAddons = {};
