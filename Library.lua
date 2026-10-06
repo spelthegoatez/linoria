@@ -499,7 +499,7 @@ do
     local Lighting = game:GetService('Lighting')
 
     Library.BlurEnabled    = false;
-    Library.BlurSize       = 40;
+    Library.BlurSize       = 18;
     Library.BlurEffect     = nil;
     Library.BlurSavedState = {};
 
