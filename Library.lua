@@ -26,10 +26,10 @@ local Fonts; do
             FileName = {"proggySquare.ttf", "proggySquare.json"},
             Url = "https://github.com/sametexe001/luas/raw/refs/heads/main/fonts/proggy-square.ttf"
         };
-        ["proggy-clean"] = {
-            FileName = {"proggyClean.ttf", "proggySquare.json"},
-            Url = "https://github.com/sametexe001/luas/raw/refs/heads/main/fonts/proggy-clean.ttf"
-        };
+["proggy-clean"] = {
+    FileName = {"proggyClean.ttf", "proggyClean.json"},
+    Url = "https://github.com/sametexe001/luas/raw/refs/heads/main/fonts/proggy-clean.ttf"
+};
         ["proggy-tiny"] = {
             FileName = {"proggyTiny.ttf", "proggyTiny.json"},
             Url = "https://github.com/sametexe001/luas/raw/refs/heads/main/fonts/proggy-tiny.ttf"
@@ -75,21 +75,21 @@ local Fonts; do
                 end);
             end;
 
-            local okAsset, assetId = pcall(getcustomasset, ttfPath);
-            if okAsset and assetId then
-                local Data = {
-                    Name = Name;
-                    Faces = {{
-                        Name = "Regular";
-                        Weight = 400;
-                        Style = "Normal";
-                        AssetId = assetId;
-                    }};
-                };
-                pcall(function()
-                    writefile(jsonPath, HttpService:JSONEncode(Data));
-                end);
-            end;
+local okAsset, assetId = pcall(getcustomasset, ttfPath);
+if okAsset and assetId then
+    local Data = {
+        name = Name;
+        faces = {{
+            name = "Regular";
+            weight = 400;
+            style = "normal";
+            assetId = assetId;
+        }};
+    };
+    pcall(function()
+        writefile(jsonPath, HttpService:JSONEncode(Data));
+    end);
+          end;
         end;
     end;
     function Fonts.GetFont(Name)
