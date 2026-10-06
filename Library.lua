@@ -473,6 +473,64 @@ function Library:OnUnload(Callback)
 end
 
 Library:GiveSignal(ScreenGui.DescendantRemoving:Connect(function(Instance)
+            -- Blur handling ------------------------------------------------------------
+do
+    local Lighting = game:GetService('Lighting')
+
+    Library.BlurEnabled = false;   -- only true while the menu is open
+    Library.BlurSize    = 24;      -- adjust to taste
+    Library.BlurEffect  = nil;
+
+    local function EnsureBlur()
+        local blur = Library.BlurEffect;
+        if not blur or not blur.Parent then
+            blur = Instance.new('BlurEffect');
+            blur.Name    = '__linoria_blur';
+            blur.Size    = Library.BlurSize;
+            blur.Enabled = Library.BlurEnabled;
+            blur.Parent  = Lighting;
+            Library.BlurEffect = blur;
+        end;
+        return blur;
+    end;
+
+    function Library:SetBlur(Enabled)
+        Library.BlurEnabled = Enabled;
+        local blur = EnsureBlur();
+        blur.Enabled = Enabled;
+    end;
+
+    function Library:SetBlurSize(Size)
+        Library.BlurSize = Size;
+        local blur = EnsureBlur();
+        blur.Size = Size;
+    end;
+
+    -- Re-add if someone removes our BlurEffect (or clears Lighting).
+    Library:GiveSignal(Lighting.ChildRemoved:Connect(function(Child)
+        if Child == Library.BlurEffect or Child.Name == '__linoria_blur' then
+            Library.BlurEffect = nil;
+            if Library.BlurEnabled then
+                EnsureBlur();
+            end;
+        end;
+    end));
+
+    -- Watchdog: periodically re-assert the effect so we survive total
+    -- Lighting resets / scripts that wipe everything under Lighting.
+    task.spawn(function()
+        while ScreenGui.Parent do
+            task.wait(0.5);
+
+            if Library.BlurEnabled then
+                local blur = EnsureBlur();
+                if blur.Size ~= Library.BlurSize then blur.Size = Library.BlurSize end;
+                if not blur.Enabled then blur.Enabled = true end;
+            end;
+        end;
+    end);
+end;
+-- --------------------------------------------------------------------------
     if Library.RegistryMap[Instance] then
         Library:RemoveFromRegistry(Instance);
     end;
